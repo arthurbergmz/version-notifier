@@ -37,13 +37,12 @@ The first argument must always be the root directory of your app.
 
 ##### package.json
 
-You can specify a different provider through `versionNotifier` on your `package.json`. Out-of-the-box providers: `npm`.
+You can specify a different provider through `versionNotifier.provider` on your `package.json`. Out-of-the-box providers: `npm`.
 
 ```json
 {
     "name": "myPackage",
     "version": "1.0.0",
-    ...
     "versionNotifier": {
         "provider": "npm"
     }
@@ -63,7 +62,7 @@ checkVersion(__dirname, function (packageName, currentVersion, log) {
 
 ### Function Parameters
 
-##### checkVersion(appRootDirectory, customProvider, log)
+#### checkVersion(appRootDirectory, customProvider, log)
 
 **appRootDirectory**
 
@@ -116,4 +115,4 @@ Licensed under [MIT](https://github.com/arthurbergmz/version-notifier/blob/maste
 
 ---
 
-> _**Disclaimer:** `version-notifier` is still an experiment to improve development environments. Methods and behavior can change along the way._
+> _**Disclaimer:** `version-notifier` is an experiment to improve development environments and it is still in alpha. Methods and behavior can change along the way._
