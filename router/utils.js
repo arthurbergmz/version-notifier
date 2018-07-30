@@ -2,15 +2,9 @@ var defaultProvider = require('../providers/npm')
 
 module.exports = {
   defaultProvider: defaultProvider,
-  isThisProject: function (pkg, obj, packageName) {
-    if (obj) {
-      var objPackageName = obj.packageName
-      if (objPackageName === packageName) {
-        return true
-      }
-    }
-    if (pkg) {
-      return pkg.name === packageName
+  isThisProject: function (parent, packageName) {
+    if (parent) {
+      return parent.name === packageName
     }
     throw new Error('Package name not found!')
   },
@@ -23,18 +17,6 @@ module.exports = {
       providerObj.isDeprecated = defaultProvider.isDeprecated
     }
     return providerObj
-  },
-  extractPropertyFromPackageOrObject: function (pkg, obj, pkgPropertyName, objPropertyName) {
-    if (obj) {
-      var objPropertyValue = obj[objPropertyName]
-      if (objPropertyValue) {
-        return objPropertyValue
-      }
-    }
-    if (pkg) {
-      return pkg[pkgPropertyName]
-    }
-    return undefined
   },
   extractPropertyFromObject: function (obj, propertyName) {
     if (obj) {

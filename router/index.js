@@ -1,45 +1,42 @@
 var utils = require('./utils')
 var providers = require('../providers')
 
-module.exports = function (pkg, config, callback) {
-  var packageName = utils.extractPropertyFromPackageOrObject(pkg, config, 'name', 'packageName')
+module.exports = function (parentPkg, pkg, provider, callback) {
+  var packageName = utils.extractPropertyFromObject(pkg, 'name')
   if (!packageName) {
-    return callback(new Error('"packageName" was not found.'))
+    return callback(new Error('Property "name" was not found in package definition.'))
   }
-  if (utils.isThisProject(pkg, config, packageName)) {
+  if (utils.isThisProject(parentPkg, packageName)) {
     return callback()
   }
-  var customProvider = utils.extractPropertyFromObject(config, 'provider')
-  if (customProvider) {
-    var typeOfCustomProvider = typeof customProvider
-    if (typeOfCustomProvider === 'string') {
-      customProvider = providers[customProvider]
-    } else if (typeOfCustomProvider === 'function') {
-      customProvider = {
+  if (provider) {
+    var typeOfProvider = typeof provider
+    if (typeOfProvider === 'function') {
+      provider = {
         isDependency: utils.defaultProvider.isDependency,
         resolver: customProvider
       }
-    } else if (typeOfCustomProvider !== 'object') {
-      return callback(new Error('Unknown custom provider type: ' + typeOfCustomProvider))
+    } else if (typeOfProvider !== 'object') {
+      return callback(new Error('Unknown provider type: ' + typeOfProvider))
     }
   } else {
     var providerFromPackage = utils.getProviderFromPackage(pkg)
     if (providerFromPackage) {
-      customProvider = providers[providerFromPackage]
+      provider = providers[providerFromPackage]
     } else {
-      customProvider = utils.defaultProvider
+      provider = utils.defaultProvider
     }
   }
-  if (!customProvider) {
+  if (!provider) {
     return callback(new Error('Provider not found.'))
   }
-  var checkDependency = customProvider.isDependency
-  if (!checkDependency(pkg, packageName)) {
+  var isDirectDependency = provider.isDependency
+  if (isDirectDependency && !isDirectDependency(parentPkg, packageName)) {
     return callback()
   }
-  var currentVersion = utils.extractPropertyFromPackageOrObject(pkg, config, 'version', 'currentVersion')
+  var currentVersion = utils.extractPropertyFromObject(pkg, 'version')
   if (!currentVersion) {
-    return callback(new Error('"currentVersion" was not found.'))
+    return callback(new Error('Property "version" was not found in package definition.'))
   }
-  customProvider.resolver(packageName, currentVersion, callback)
+  provider.resolver(packageName, currentVersion, callback)
 }

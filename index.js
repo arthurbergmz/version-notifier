@@ -2,48 +2,53 @@ var path = require('path')
 var router = require('./router')
 var notifier = require('./notifier')
 
-function getDefaultPackage (onError) {
-  var defaultPackage = path.join(process.cwd(), 'package.json')
-  var defaultPackageObj = require(defaultPackage)
-  if (defaultPackageObj) {
-    return defaultPackage
+function main (pkg, customProvider, callback) {
+  if (!pkg) {
+    return notifier(new Error('You must specify a valid package.json!'))
   }
-  onError(new Error('Package file not found: ' + defaultPackage))
-}
-
-module.exports = function (pkg, config, callback) {
-  if (!callback) {
+  var typeOfPkg = typeof pkg
+  if (typeOfPkg === 'string') {
+    var pkgPath = path.normalize(path.join(pkg, 'package.json'))
+    pkg = require(pkgPath)
+    if (!pkg) {
+      return notifier(new Error('Couldn\'t load ' + pkgPath + '.'))
+    }
+  } else if (typeOfPkg !== 'object') {
+    return next(new Error('The first parameter must be a string or an object.'))
+  }
+  if (!pkg.name || !pkg.version) {
+    return notifier(new Error('Invalid package declaration: missing "name" and "version" properties.'))
+  }
+  if (customProvider) {
+    var typeOfCustomProvider = typeof customProvider
+    if (typeOfCustomProvider === 'object') {
+      if (!customProvider.resolver) {
+        return notifier(new Error('Providers objects must have a resolver.'))
+      }
+    } else if (typeOfCustomProvider === 'function') {
+      if (!callback && customProvider.length < 3) {
+        callback = customProvider
+        customProvider = undefined
+      }
+    } else {
+      return notifier(new Error('Unknown type of provider: ' + typeOfCustomProvider))
+    }
+  }
+  if (callback) {
+    if (typeof callback !== 'function') {
+      return notifier(new Error('Callback must be a function.'))
+    }
+  } else {
     callback = notifier
   }
-  if (typeof pkg === 'string') {
-    pkg = require(path.normalize(pkg))
-    if (!pkg) {
-      return callback(new Error('Package file not found.'))
-    }
+  var parentPkgPath = path.join(path.dirname(require.main.filename), 'package.json')
+  var parentPkg = require(parentPkgPath)
+  if (!parentPkg) {
+    return notifier(new Error('Parent package file not found: ' + parentPkgPath))
   }
-  if (typeof config === 'string') {
-    config = require(path.normalize(config))
-    if (!config) {
-      return callback(new Error('Config file not found.'))
-    }
-  }
-  if (pkg && (typeof pkg === 'object') && !config) {
-    var defaultPackageObj = getDefaultPackage(callback)
-    if (defaultPackageObj) {
-      router(defaultPackageObj, pkg, callback)
-    }
-  } else if (pkg && config) {
-    if (typeof config === 'function') {
-      router(pkg, undefined, config)
-    } else {
-      router(pkg, config)
-    }
-  } else if (!pkg && config) {
-    router(null, config, callback)
-  } else {
-    var defaultPackageObj = getDefaultPackage(callback)
-    if (defaultPackageObj) {
-      router(defaultPackageObj, undefined, callback)
-    }
-  }
+  router(parentPkg, pkg, customProvider, callback)
 }
+
+main(__dirname)
+
+module.exports = main
