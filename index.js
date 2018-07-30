@@ -1,16 +1,20 @@
 var path = require('path')
-var versionChecker = require('./versionChecker')
+var router = require('./router')
+var notifier = require('./notifier')
 
-function configRouter (obj, callback) {
-  var isPackageJson = obj.versionNotifier
-  if (isPackageJson) {
-    versionChecker(obj, undefined, callback)
-  } else {
-    versionChecker(undefined, obj, callback)
+function getDefaultPackage (onError) {
+  var defaultPackage = path.join(process.cwd(), 'package.json')
+  var defaultPackageObj = require(defaultPackage)
+  if (defaultPackageObj) {
+    return defaultPackage
   }
+  onError(new Error('Package file not found: ' + defaultPackage))
 }
 
 module.exports = function (pkg, config, callback) {
+  if (!callback) {
+    callback = notifier
+  }
   if (typeof pkg === 'string') {
     pkg = require(path.normalize(pkg))
     if (!pkg) {
@@ -24,17 +28,22 @@ module.exports = function (pkg, config, callback) {
     }
   }
   if (pkg && (typeof pkg === 'object') && !config) {
-    configRouter(pkg, callback)
-  } else if (pkg && config) {
-    configRouter(pkg, (typeof config === 'function') ? config : callback)
-  } else if (!pkg && config) {
-    versionChecker(null, config, callback)
-  } else {
-    var defaultPackage = path.join(process.cwd(), 'package.json')
-    var defaultPackageObj = require(defaultPackage)
-    if (!defaultPackageObj) {
-      return callback(new Error('Package file not found: ' + defaultPackage))
+    var defaultPackageObj = getDefaultPackage(callback)
+    if (defaultPackageObj) {
+      router(defaultPackageObj, pkg, callback)
     }
-    versionChecker(defaultPackageObj, undefined, callback)
+  } else if (pkg && config) {
+    if (typeof config === 'function') {
+      router(pkg, undefined, config)
+    } else {
+      router(pkg, config)
+    }
+  } else if (!pkg && config) {
+    router(null, config, callback)
+  } else {
+    var defaultPackageObj = getDefaultPackage(callback)
+    if (defaultPackageObj) {
+      router(defaultPackageObj, undefined, callback)
+    }
   }
 }
